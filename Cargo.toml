@@ -1,0 +1,21 @@
+[package]
+name = "illya"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+doctest = false
+
+[[bin]]
+name = "illya"
+path = "src/bin/illya.rs"
+doc = false
+
+[dependencies]
+# parse command-line.
+clap = "3.0.14"
+# linux c api for rust.
+nix = "0.23.1"
+log = { version = "0.4.14", features = ["std"] }
+
+lazy_static = "1.4.0"
