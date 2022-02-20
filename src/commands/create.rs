@@ -1,10 +1,13 @@
 use clap::{App, Arg};
-use std::process;
-use std::io::prelude::*;
+use std::{
+    process,
+    io::prelude::*,
+    os::unix::io::{FromRawFd},
+    fs::File
+};
 use nix::sys::socket;
-use std::os::unix::io::{FromRawFd};
-use std::fs::File;
 use log::{error};
+use super::{Executable, Context};
 
 pub fn subcommand<'a>() -> App<'a> {
     App::new("create")
@@ -18,22 +21,57 @@ pub fn subcommand<'a>() -> App<'a> {
             .help("filename that the container pid will be written to")
             .takes_value(true)
             .long("pid-file"))
-        .arg(Arg::new("containers")
-            .multiple_occurrences(true)
+        .arg(Arg::new("container")
+            .multiple_occurrences(false)
     )
 }
 
 
 #[derive(Debug)]
-pub struct Command<'a> {
-    pub container_ids: Vec<&'a str>,
-    pub pid_file: &'a str,
-    pub bundle: &'a str,
+pub struct Command {
+    pub container_id: String,
+    pub pid_file: String,
+    pub bundle: String,
 }
 
+impl Command {
+    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+        let pidfile: String;
+        if let Some(pid_file) = sub_matchs.value_of("pid-file") {
+            pidfile = String::from(pid_file);
+        } else {
+            error!("no pid-file");
+            process::exit(1);
+        }
 
-impl<'a> Command<'a> {
-    pub fn execute (&self,) {
+        let bundle: String;
+        if let Some(b) = sub_matchs.value_of("bundle") {
+            bundle = String::from(b);
+        } else {
+            error!("no bundle");
+            process::exit(1);
+        }
+
+        let container_id: String;
+        match sub_matchs.value_of("container") {
+            Some(id) => {
+                container_id = String::from(id);
+            },
+            None => {
+                error!("no input container.");
+                process::exit(1);
+            }
+        }
+        Box::from(Command{
+            container_id: container_id,
+            bundle: bundle,
+            pid_file: pidfile,
+        })
+    }
+}
+
+impl Executable for Command {
+    fn execute (&self,) {
         let (init_p, init_c) = socket::socketpair(
                                 socket::AddressFamily::Unix, 
                                 socket::SockType::Stream, None, 
@@ -42,7 +80,7 @@ impl<'a> Command<'a> {
 
         let child = process::Command::new("/proc/self/exe")
                         .env("_LIBCONTAINER_INITPIPE", format!("{}", init_c))
-                        .env("_CONTAINER_BUNDLE", self.bundle)
+                        .env("_CONTAINER_BUNDLE", &self.bundle)
                         .arg("init")
                         .spawn();
 
@@ -56,39 +94,5 @@ impl<'a> Command<'a> {
                 // debug!("child exit with {}", code);
             },
         };
-    }
-
-    pub fn new (sub_matchs: &'a clap::ArgMatches) -> Command<'a> {
-        let mut command = Command{
-            container_ids: vec![],
-            pid_file: "",
-            bundle: ""
-        };
-
-        if let Some(pid_file) = sub_matchs.value_of("pid-file") {
-            command.pid_file = pid_file
-        } else {
-            error!("no pid-file");
-            process::exit(1);
-        }
-
-        if let Some(bundle) = sub_matchs.value_of("bundle") {
-            command.bundle = bundle
-        } else {
-            error!("no bundle");
-            process::exit(1);
-        }
-
-        match sub_matchs.values_of("containers") {
-            Some(ids) => {
-                let ids: Vec<_> = ids.collect();
-                command.container_ids = ids;
-            },
-            None => {
-                error!("no input containers.");
-                process::exit(1);
-            }
-        }
-        command
     }
 }

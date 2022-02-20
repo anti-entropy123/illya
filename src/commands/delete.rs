@@ -2,6 +2,7 @@ extern crate clap;
 use clap::{App, Arg};
 use std::process;
 use log::{error};
+use super::{Executable, Context};
 
 pub fn subcommand<'a>() -> App<'a> {
     App::new("delete")
@@ -12,40 +13,42 @@ pub fn subcommand<'a>() -> App<'a> {
             .long("force")
             .short('f')
             .takes_value(false))
-        .arg(Arg::new("containers")
+        .arg(Arg::new("container")
             .help("containers id need deleted")
-            .multiple_occurrences(true))
+            .multiple_occurrences(false))
             // .required(true))
 }
 
 #[derive(Debug)]
-pub struct Command<'a> {
-    pub container_ids: Vec<&'a str>,
+pub struct Command {
+    pub container_id: String,
     pub force: bool,
 }
 
-impl<'a> Command<'a> {
-    pub fn execute (&self,) {
-    }
-
-    pub fn new (sub_matchs: &'a clap::ArgMatches) -> Command<'a> {
-        let mut command = Command{
-            container_ids: vec![],
-            force: false,
-        };
+impl Command {
+    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+        let force: bool;
         if sub_matchs.is_present("force") {
-            command.force = true;
+            force = true;
         }
-        match sub_matchs.values_of("containers") {
-            Some(ids) => {
-                let ids: Vec<_> = ids.collect();
-                command.container_ids = ids;
+        let container_id: String;
+        match sub_matchs.value_of("container") {
+            Some(id) => {
+                container_id = String::from(id);
             },
             None => {
-                error!("no input containers.");
+                error!("no input container.");
                 process::exit(1);
             }
         }
-        command
+        Box::from(Command{
+            container_id: container_id,
+            force: false,
+        })
+    }
+}
+
+impl Executable for Command {
+    fn execute (&self,) {
     }
 }

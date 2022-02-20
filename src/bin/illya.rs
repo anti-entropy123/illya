@@ -1,10 +1,10 @@
-use clap::{App};
-use illya::commands::*;
-use illya::log as logger;
-use log::{debug, LevelFilter, error};
-use std::env;
-use std::path;
-use std::process;
+use clap::{App,};
+use illya::{
+   commands,
+   commands::*,
+   log as logger,
+};
+use log::{debug, LevelFilter};
 
 fn execute() {
    let matchs = App::new("illya")
@@ -16,26 +16,12 @@ fn execute() {
          init::subcommand(),
          delete::subcommand(),
          start::subcommand(),
+         spec::subcommand(),
       ])
       .get_matches();
-
-   match matchs.subcommand() {
-      Some(("delete", sub_matchs)) => {
-         delete::Command::new(sub_matchs).execute();
-      },
-      Some(("create", sub_matchs)) => {
-         create::Command::new(sub_matchs).execute();
-      },
-      Some(("init", _)) => {
-         init::Command::new().execute();
-      },
-      Some(("start", _)) => {
-         start::Command::new().execute();
-      },
-      _ => {
-         error!("no subcommand: {:?}", matchs);
-      }
-   }
+   
+   let subcommand = commands::match_command(matchs);
+   subcommand.execute();
 }
 
 fn set_log() {
@@ -44,24 +30,26 @@ fn set_log() {
    log::set_max_level(LevelFilter::Trace);
 }
 
-fn before_exec() {
-   let _root: String;
-   match env::var("XDG_RUNTIME_DIR") {
-      Ok(mut v) if v != "" => {
-         v.push(path::MAIN_SEPARATOR);
-         _root = v + "illya";
-      },
-      _ => {
-         error!("no XDG_RUNTIME_DIR");
-         process::exit(1);
-      }
-   }
-
-}
+// fn before_exec() -> Context {
+//    let root: String;
+//    match env::var("XDG_RUNTIME_DIR") {
+//       Ok(mut v) if v != "" => {
+//          v.push(path::MAIN_SEPARATOR);
+//          root = v + "illya"; // "/run/user/1000/illya"
+//       },
+//       _ => {
+//          error!("no XDG_RUNTIME_DIR");
+//          process::exit(1);
+//       }
+//    }
+//    Context{
+//       root: root,
+//    }
+// }
 
 fn main() {
    set_log();
    debug!("{:?}", std::env::args());
-   before_exec();
    execute();
 }
+

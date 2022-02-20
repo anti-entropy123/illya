@@ -17,5 +17,6 @@ clap = "3.0.14"
 # linux c api for rust.
 nix = "0.23.1"
 log = { version = "0.4.14", features = ["std"] }
+chrono = "0.4"
 
 lazy_static = "1.4.0"

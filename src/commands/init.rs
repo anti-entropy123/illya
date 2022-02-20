@@ -1,12 +1,14 @@
 use clap::{App,};
-use std::env;
-use std::os::unix::io::{FromRawFd};
-use std::fs::File;
-use std::io::prelude::*;
-use std::process;
-// use nix::sys::socket;
-use std::fs;
+use std::{
+    env,
+    process,
+    os::unix::io::{FromRawFd},
+    fs,
+    fs::File,
+    io::prelude::*
+};
 use log::{error, debug};
+use super::{Executable, Context};
 
 pub fn subcommand<'a>() -> App<'a> {
     App::new("init")
@@ -19,7 +21,13 @@ pub struct Command {
 }
 
 impl Command {
-    pub fn execute (&self,) {
+    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+        Box::from(Command{})
+    }
+}
+
+impl Executable for Command {
+    fn execute (&self,) {
         let mut buffer = [0u8; 1024];
         let pipe_fd_var = env::var("_LIBCONTAINER_INITPIPE").expect("can't get env _LIBCONTAINER_INITPIPE");
         let bundle = env::var("_CONTAINER_BUNDLE").expect("can't get env _CONTAINER_BUNDLE");
@@ -52,7 +60,7 @@ impl Command {
         // prinln!("pid_file={}", pid_file);
         let mut pid_file = File::create(pid_file).expect("open pid-file fail");
         pid_file.write_all(format!("{}", process::id()).as_bytes()).expect("write pid-file fail");
-
+        
         // let attach_sock = socket::socket(
         //                     socket::AddressFamily::Unix, 
         //                     socket::SockType::Stream, 
@@ -79,7 +87,5 @@ impl Command {
         
     }
 
-    pub fn new () -> Command {
-        Command{}
-    }
+    
 }
