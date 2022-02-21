@@ -13,10 +13,13 @@ doc = false
 
 [dependencies]
 # parse command-line.
-clap = "3.0.14"
+clap = "3.0"
 # linux c api for rust.
-nix = "0.23.1"
-log = { version = "0.4.14", features = ["std"] }
+nix = "0.23"
+log = { version = "0.4", features = ["std"] }
+# format datetime
 chrono = "0.4"
-
-lazy_static = "1.4.0"
+path-filetype = "0.1"
+# parse json data
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }

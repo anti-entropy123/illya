@@ -20,10 +20,8 @@ pub fn subcommand<'a>() -> App<'a> {
 pub struct Command {
 }
 
-impl Command {
-    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
-        Box::from(Command{})
-    }
+pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+    Box::from(Command{})
 }
 
 impl Executable for Command {
@@ -55,7 +53,7 @@ impl Executable for Command {
             }
         }
         let pid_file = String::from_utf8(raw_data).expect("can't from_utf8");
-        let run_path = String::from(&pid_file[0..pid_file.len()-"pidfile".len()]);
+        let run_path = String::from(&pid_file[0..pid_file.len()-"pidfile".len()-1]);
         File::create((run_path + "oci-log").as_str()).expect("create oci-log fail");
         // prinln!("pid_file={}", pid_file);
         let mut pid_file = File::create(pid_file).expect("open pid-file fail");

@@ -18,18 +18,17 @@ pub struct Command {
     bundle: String
 }
 
-impl Command {
-    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
-        let bundle = if let Some(v) = sub_matchs.value_of("bundle") {
-            String::from(v)
-        } else {
-            String::from(String::from(env::var("PWD").unwrap()))
-        };
-        Box::from(Command{
-            bundle: String::from(bundle),
-        })
-    }
+pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+    let bundle = if let Some(v) = sub_matchs.value_of("bundle") {
+        String::from(v)
+    } else {
+        String::from(String::from(env::var("PWD").unwrap()))
+    };
+    Box::from(Command{
+        bundle: String::from(bundle),
+    })
 }
+
 
 impl Executable for Command {
     fn execute (&self,) {

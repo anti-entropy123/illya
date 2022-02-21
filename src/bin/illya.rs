@@ -25,8 +25,7 @@ fn execute() {
 }
 
 fn set_log() {
-   log::set_boxed_logger(Box::new(logger::MyLogger::new()))
-      .expect("fail to init log");
+   log::set_boxed_logger(Box::new(logger::new())).expect("fail to init log");
    log::set_max_level(LevelFilter::Trace);
 }
 

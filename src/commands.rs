@@ -14,19 +14,19 @@ pub struct Context {
 pub fn match_command(matchs: clap::ArgMatches) -> Box<dyn Executable> {
     let command = match matchs.subcommand() {
         Some(("delete", sub_matchs)) => {
-            delete::Command::new(sub_matchs)
+            delete::new(sub_matchs)
         },
         Some(("create", sub_matchs)) => {
-            create::Command::new(sub_matchs)
+            create::new(sub_matchs)
         },
         Some(("init", sub_matchs)) => {
-            init::Command::new(sub_matchs)
+            init::new(sub_matchs)
         },
         Some(("start", sub_matchs)) => {
-            start::Command::new(sub_matchs)
+            start::new(sub_matchs)
         },
         Some(("spec", sub_matchs)) => {
-            spec::Command::new(sub_matchs)
+            spec::new(sub_matchs)
         },
         _ => {
            error!("unimplement subcommand: {:?}", matchs);

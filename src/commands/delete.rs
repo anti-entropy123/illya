@@ -25,27 +25,25 @@ pub struct Command {
     pub force: bool,
 }
 
-impl Command {
-    pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
-        let force: bool;
-        if sub_matchs.is_present("force") {
-            force = true;
-        }
-        let container_id: String;
-        match sub_matchs.value_of("container") {
-            Some(id) => {
-                container_id = String::from(id);
-            },
-            None => {
-                error!("no input container.");
-                process::exit(1);
-            }
-        }
-        Box::from(Command{
-            container_id: container_id,
-            force: false,
-        })
+pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+    let force: bool;
+    if sub_matchs.is_present("force") {
+        force = true;
     }
+    let container_id: String;
+    match sub_matchs.value_of("container") {
+        Some(id) => {
+            container_id = String::from(id);
+        },
+        None => {
+            error!("no input container.");
+            process::exit(1);
+        }
+    }
+    Box::from(Command{
+        container_id: container_id,
+        force: false,
+    })
 }
 
 impl Executable for Command {

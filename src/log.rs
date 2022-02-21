@@ -6,13 +6,17 @@ use log::{Record, Metadata};
 use chrono;
 
 pub struct MyLogger {
+    log_file: String
 }
 
-impl MyLogger {
-    pub fn new() -> MyLogger{
-        MyLogger {}
+pub fn new() -> MyLogger{
+        // let mut home = std::env::var("HOME").unwrap();
+        let mut home = String::from("/home/yjn");
+        home.push(std::path::MAIN_SEPARATOR);
+        MyLogger {
+            log_file: home + "illya_log"
+        }
     }
-}
 
 impl log::Log for MyLogger {
     fn enabled(&self, _metadata: &Metadata) -> bool {
@@ -23,14 +27,16 @@ impl log::Log for MyLogger {
         let utc = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let mut file = fs::OpenOptions::new()
                         .append(true)
-                        .open(std::env::var("HOME").unwrap() + "/illya_log").unwrap();
+                        .open(&self.log_file).unwrap();
 
-        file.write(format!("{}:{}:{} - {}\n", 
+        let msg = format!("{}:{}:{} - {}\n", 
             record.level(), 
             record.target(), 
             utc,
             record.args()
-        ).as_bytes()).unwrap();
+        );
+        file.write(msg.as_bytes()).unwrap();
+        print!("{}", msg);
     }
 
     fn flush(&self) {}
