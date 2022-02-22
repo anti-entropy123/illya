@@ -26,25 +26,8 @@ fn execute() {
 
 fn set_log() {
    log::set_boxed_logger(Box::new(logger::new())).expect("fail to init log");
-   log::set_max_level(LevelFilter::Trace);
+   log::set_max_level(LevelFilter::Info);
 }
-
-// fn before_exec() -> Context {
-//    let root: String;
-//    match env::var("XDG_RUNTIME_DIR") {
-//       Ok(mut v) if v != "" => {
-//          v.push(path::MAIN_SEPARATOR);
-//          root = v + "illya"; // "/run/user/1000/illya"
-//       },
-//       _ => {
-//          error!("no XDG_RUNTIME_DIR");
-//          process::exit(1);
-//       }
-//    }
-//    Context{
-//       root: root,
-//    }
-// }
 
 fn main() {
    set_log();
