@@ -41,16 +41,11 @@ pub struct Command {
     pub pid_file: String,
     pub bundle: String,
     pub runtime_dir: String,
+    pub container_rt_dir: String,
 }
 
 pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
-    let pidfile: String;
-    if let Some(pid_file) = sub_matchs.value_of("pid-file") {
-        pidfile = String::from(pid_file);
-    } else {
-        error!("no pid-file");
-        process::exit(1);
-    }
+    let pid_file = sub_matchs.value_of("pid-file").expect("no pid-file");
 
     let bundle = if let Some(b) = sub_matchs.value_of("bundle") {
         b
@@ -76,9 +71,10 @@ pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
     }
 
     Box::from(Command {
-        container_id: container_id,
+        container_id: container_id.clone(),
         bundle: bundle,
-        pid_file: pidfile,
+        pid_file: pid_file.to_string(),
+        container_rt_dir: ctx.container_rt_dir(&container_id),
         runtime_dir: ctx.runtime_dir,
     })
 }
@@ -116,6 +112,7 @@ impl Command {
             bundle: self.bundle.clone(),
             pid_file: self.pid_file.clone(),
             runtime_dir: self.runtime_dir.clone(),
+            container_rt_dir: self.container_rt_dir.clone(),
         }
     }
 }
@@ -135,7 +132,7 @@ fn send_to_pipe(pipe_fd: i32, data: impl Serialize) -> Result<(), String> {
 impl Executable for Command {
     fn execute(&self) {
         let oci_config = load_oci_config(&self.bundle).expect("parse config.json fail");
-        info!("oci config is {:?}", oci_config);
+        // info!("oci config is {:?}", oci_config);
 
         let (init_p, init_c) = socket::socketpair(
             socket::AddressFamily::Unix,
