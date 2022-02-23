@@ -1,13 +1,12 @@
 use {
-    crate::{commands::Executable, utils, models::init},
+    crate::{commands::Executable, models::init, utils},
     clap::App,
-    log::{debug, error},
+    log::{debug, error, info},
     nix::sys::socket,
-    std::{env, fs, io, io::prelude::*, os::unix::io::FromRawFd, path, process},
     serde_json,
-    wasmtime,
-    wasmtime_wasi,
-    wasmtime_wasi::sync::WasiCtxBuilder
+    std::{env, fs, io, io::prelude::*, os::unix::io::FromRawFd, path, process},
+    unix_named_pipe, wasmtime, wasmtime_wasi,
+    wasmtime_wasi::sync::WasiCtxBuilder,
 };
 
 pub fn subcommand<'a>() -> App<'a> {
@@ -19,21 +18,18 @@ pub struct Command {
     param: init::Parameter,
 }
 
-pub fn new(sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+pub fn new(_sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
     let pipe_fd_var =
         env::var("_LIBCONTAINER_INITPIPE").expect("can't get env _LIBCONTAINER_INITPIPE");
     debug!("pipe child fd is {}", pipe_fd_var);
     let pipe_fd = pipe_fd_var
-            .parse::<i32>()
-            .expect(&format!("wrong format, pipe_fd_var={}", pipe_fd_var));
-    
-    let paramater: init::Parameter = serde_json::from_str(&read_from_pipe_fd(pipe_fd))
-                                        .expect("failed format param to struct");
+        .parse::<i32>()
+        .expect(&format!("wrong format, pipe_fd_var={}", pipe_fd_var));
 
+    let paramater: init::Parameter =
+        serde_json::from_str(&read_from_pipe_fd(pipe_fd)).expect("failed format param to struct");
     debug!("init param is {:?}", paramater);
-    Box::from(Command {
-        param: paramater
-    })
+    Box::from(Command { param: paramater })
 }
 
 impl Command {
@@ -48,28 +44,51 @@ impl Command {
         pid_file.write_all(format!("{}", process::id()).as_bytes())
     }
 
-    fn load_wasm_module(&self) {
-        let engine = wasmtime::Engine::default();
-        let module = wasmtime::Module::from_file(&engine, self.param.args.get(0).unwrap())
-                        .expect("failed to create wasm module");
-        let mut linker = wasmtime::Linker::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |cx| cx)
-                        .expect("failed to add wasi to linker");
-        let wasi_ctx = WasiCtxBuilder::new().inherit_stdio().build();
-        let mut store = wasmtime::Store::new(&engine, wasi_ctx);
-        let instance = linker.instantiate(&mut store, &module)
-                        .expect("failed to create wasm instance");
+    fn wait_start(&self) {
+        let rt_dir = path::PathBuf::from(&self.param.runtime_dir);
+        let container_rt_dir = rt_dir.join("containers").join(&self.param.container_id);
+        // "/run/user/1000/illya/containers/123/"
+        let container_rt_dir = container_rt_dir.to_str().unwrap();
 
-        let func = instance.get_func(&mut store, "_start")
-                .expect("`_start` was not an exported function");
-        let func = func.typed::<(), (), _>(&store)
-                .expect("wrong func type");
-
-        let result = func.call(&mut store, ())
-                .expect("failed to call func");
-
-        println!("result: {:?}", result);
+        if !utils::is_directory(&String::from(container_rt_dir)) {
+            fs::create_dir_all(container_rt_dir).expect("failed to create container_rt_dir");
+        }
+        let exce_fifo = path::Path::new(&container_rt_dir).join("exce.fifo");
+        unix_named_pipe::create(&exce_fifo, Some(0o740)).expect("failed to create fifo");
+        info!("create fifo ready, start to read it");
+        fs::File::open(exce_fifo)
+            .expect("failed to open fifo")
+            .read(&mut [0; 0])
+            .expect("failed to read from fifo");
+        info!("successed to read from fifo")
     }
+}
+
+fn load_wasm_module(
+    entry_point: &path::Path,
+) -> (wasmtime::Store<wasmtime_wasi::WasiCtx>, wasmtime::Func) {
+    let engine = wasmtime::Engine::default();
+    let module =
+        wasmtime::Module::from_file(&engine, entry_point).expect("failed to create wasm module");
+    let mut linker = wasmtime::Linker::new(&engine);
+    wasmtime_wasi::add_to_linker(&mut linker, |cx| cx).expect("failed to add wasi to linker");
+    let wasi_ctx = WasiCtxBuilder::new().inherit_stdio().build();
+    let mut store = wasmtime::Store::new(&engine, wasi_ctx);
+    let instance = linker
+        .instantiate(&mut store, &module)
+        .expect("failed to create wasm instance");
+
+    let func = instance
+        .get_func(&mut store, "_start")
+        .expect("`_start` was not an exported function");
+
+    (store, func)
+}
+
+fn call_wasm_func(mut store: wasmtime::Store<wasmtime_wasi::WasiCtx>, func: wasmtime::Func) {
+    let func = func.typed::<(), (), _>(&store).expect("wrong func type");
+    let result = func.call(&mut store, ()).expect("failed to call func");
+    println!("result: {:?}", result);
 }
 
 fn read_from_pipe_fd(pipe_fd: i32) -> String {
@@ -83,8 +102,8 @@ fn read_from_pipe_fd(pipe_fd: i32) -> String {
                 if size < buffer.len() {
                     break;
                 }
-            },
-            Ok(_) => {break},
+            }
+            Ok(_) => break,
             Err(e) => {
                 error!("read init_pipe fail, {}", e);
                 break;
@@ -100,7 +119,8 @@ fn create_attach_sock() -> Result<socket::SockAddr, String> {
         socket::SockType::Stream,
         socket::SockFlag::empty(),
         None,
-    ).expect("create sock fail");
+    )
+    .expect("create sock fail");
 
     let sockaddr = match nix::sys::socket::SockAddr::new_unix("attach") {
         Ok(addr) => addr,
@@ -118,7 +138,9 @@ impl Executable for Command {
         utils::display_cwd_items();
         self.create_oci_log().expect("failed to create oci-log");
         self.update_pid_file().expect("failed to update pid file");
-        // prinln!("pid_file={}", pid_file);
-        self.load_wasm_module();
+        let entry = path::Path::new(self.param.args.get(0).unwrap());
+        let (s, f) = load_wasm_module(&entry);
+        self.wait_start();
+        call_wasm_func(s, f);
     }
 }

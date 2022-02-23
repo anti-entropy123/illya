@@ -569,6 +569,7 @@ dependencies = [
  "path-filetype",
  "serde",
  "serde_json",
+ "unix-named-pipe",
  "wasmtime",
  "wasmtime-wasi",
 ]
@@ -1219,6 +1220,16 @@ name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
+
+[[package]]
+name = "unix-named-pipe"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ad653da8f36ac5825ba06642b5a3cce14a4e52c6a5fab4a8928d53f4426dae2"
+dependencies = [
+ "errno",
+ "libc",
+]
 
 [[package]]
 name = "version_check"

@@ -2,7 +2,7 @@ extern crate clap;
 use clap::{App, Arg};
 use std::process;
 use log::{error};
-use super::{Executable, Context};
+use super::{Executable};
 
 pub fn subcommand<'a>() -> App<'a> {
     App::new("delete")
@@ -26,10 +26,7 @@ pub struct Command {
 }
 
 pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
-    let force: bool;
-    if sub_matchs.is_present("force") {
-        force = true;
-    }
+    let force = sub_matchs.is_present("force");
     let container_id: String;
     match sub_matchs.value_of("container") {
         Some(id) => {
@@ -42,7 +39,7 @@ pub fn new (sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
     }
     Box::from(Command{
         container_id: container_id,
-        force: false,
+        force: force,
     })
 }
 

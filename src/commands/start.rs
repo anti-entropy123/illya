@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use super::{Executable, Context};
+use super::{Executable};
 use log::{error};
 use std::{process};
 
