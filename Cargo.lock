@@ -566,7 +566,6 @@ dependencies = [
  "clap",
  "log",
  "nix",
- "path-filetype",
  "serde",
  "serde_json",
  "unix-named-pipe",
@@ -805,12 +804,6 @@ name = "paste"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
-
-[[package]]
-name = "path-filetype"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a314af305ec00918af4cafaf61fe2485d464e73059c310cb1eb08ab13ece2038"
 
 [[package]]
 name = "pin-project-lite"

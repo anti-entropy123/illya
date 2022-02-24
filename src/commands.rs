@@ -29,23 +29,16 @@ impl Context {
             runtime_dir: runtime_dir,
         }
     }
-
-    pub fn container_rt_dir(&self, container_id: &String) -> String {
-        let rt_dir = path::PathBuf::from(&self.runtime_dir);
-        let container_rt_dir = rt_dir.join("containers").join(container_id);
-        // "/run/user/1000/illya/containers/<container-id>/"
-        String::from(container_rt_dir.to_str().unwrap())
-    }
 }
 
-pub fn match_command(matchs: clap::ArgMatches) -> Box<dyn Executable> {
-    let ctx = Context::new();
+pub fn match_command(matchs: clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
     let command = match matchs.subcommand() {
         Some(("delete", sub_matchs)) => delete::new(sub_matchs),
         Some(("create", sub_matchs)) => create::new(sub_matchs, ctx),
-        Some(("init", sub_matchs)) => init::new(sub_matchs),
+        Some(("init", sub_matchs)) => init::new(sub_matchs, ctx),
         Some(("start", sub_matchs)) => start::new(sub_matchs, ctx),
         Some(("spec", sub_matchs)) => spec::new(sub_matchs),
+        Some(("state", sub_matchs)) => state::new(sub_matchs, ctx),
         _ => {
             error!("unimplement subcommand: {:?}", matchs);
             process::exit(1);
@@ -59,3 +52,4 @@ pub mod delete;
 pub mod init;
 pub mod spec;
 pub mod start;
+pub mod state;

@@ -1,6 +1,8 @@
-use chrono;
-use log::{Metadata, Record};
-use std::{fs, io::prelude::*};
+use {
+    crate::utils,
+    log::{Metadata, Record},
+    std::{fs, io::prelude::*},
+};
 
 pub struct MyLogger {
     log_file: String,
@@ -21,7 +23,7 @@ impl log::Log for MyLogger {
     }
 
     fn log(&self, record: &Record) {
-        let utc = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let utc = utils::now_utc();
         let mut file = fs::OpenOptions::new()
             .append(true)
             .open(&self.log_file)
@@ -35,7 +37,7 @@ impl log::Log for MyLogger {
             record.args()
         );
         file.write(msg.as_bytes()).unwrap();
-        print!("{}", record.args());
+        print!("{} {}", record.level(), record.args());
     }
 
     fn flush(&self) {}

@@ -1,7 +1,12 @@
 use {
-    crate::{commands::Executable, models::init, utils},
+    crate::{
+        commands::{Context, Executable},
+        container,
+        models::{init, state},
+        utils,
+    },
     clap::App,
-    log::{error, info, warn},
+    log::{error, warn},
     nix::sys::socket,
     serde_json,
     std::{env, fs, io, io::prelude::*, os::unix::io::FromRawFd, path, process},
@@ -13,12 +18,12 @@ pub fn subcommand<'a>() -> App<'a> {
     App::new("init").about("init container").version("0.1")
 }
 
-#[derive(Debug)]
 pub struct Command {
     param: init::Parameter,
+    container: container::Container,
 }
 
-pub fn new(_sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
+pub fn new(_sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
     let pipe_fd_var =
         env::var("_LIBCONTAINER_INITPIPE").expect("can't get env _LIBCONTAINER_INITPIPE");
     let pipe_fd = pipe_fd_var
@@ -27,7 +32,11 @@ pub fn new(_sub_matchs: &clap::ArgMatches) -> Box<dyn Executable> {
 
     let paramater: init::Parameter =
         serde_json::from_str(&read_from_pipe_fd(pipe_fd)).expect("failed format param to struct");
-    Box::from(Command { param: paramater })
+
+    Box::from(Command {
+        container: container::Container::new(&paramater.container_id, Box::new(ctx)),
+        param: paramater,
+    })
 }
 
 impl Command {
@@ -43,11 +52,12 @@ impl Command {
     }
 
     fn wait_start(&self) {
-        if !utils::is_directory(&self.param.container_rt_dir) {
-            fs::create_dir_all(&self.param.container_rt_dir)
+        if !utils::is_directory(&self.container.crt_dir()) {
+            fs::create_dir_all(&self.container.crt_dir())
                 .expect("failed to create container_rt_dir");
         }
-        let exec_fifo = path::Path::new(&self.param.container_rt_dir).join("exec.fifo");
+
+        let exec_fifo = path::Path::new(&self.container.crt_dir()).join("exec.fifo");
         unix_named_pipe::create(&exec_fifo, Some(0o740)).expect("failed to create fifo");
         // info!("create fifo ready, start to read it");
         fs::File::open(&exec_fifo)
@@ -131,6 +141,7 @@ fn create_attach_sock() -> Result<socket::SockAddr, String> {
 
 impl Executable for Command {
     fn execute(&self) {
+        let created_time = utils::now_utc();
         env::set_current_dir(&self.param.root_path).expect("failed to change cwd");
         // utils::display_cwd_items();
         self.create_oci_log().expect("failed to create oci-log");
@@ -138,6 +149,22 @@ impl Executable for Command {
         let entry = path::Path::new(self.param.args.get(0).unwrap());
         let (s, f) = load_wasm_module(&entry);
         self.wait_start();
+
+        let oci_config =
+            container::load_oci_config(&self.param.bundle).expect("failed to load oci config");
+        let mut labels = oci_config.annotations;
+        labels.push(format!("bundle={}", self.param.bundle));
+
+        self.container.update_state_file(&state::State {
+            id: self.container.id.clone(),
+            init_process_pid: process::id(),
+            created: created_time,
+            config: state::Config {
+                rootfs: self.param.root_path.to_string(),
+                labels,
+            },
+        });
         call_wasm_func(s, f);
+        self.container.clear();
     }
 }

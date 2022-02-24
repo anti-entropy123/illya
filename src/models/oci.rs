@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
@@ -14,4 +14,5 @@ pub struct Root {
 pub struct Config {
     pub root: Root,
     pub process: Process,
+    pub annotations: Vec<String>,
 }

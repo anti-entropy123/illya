@@ -1,7 +1,9 @@
 use {
-    crate::commands::{Context, Executable},
+    crate::{
+        commands::{Context, Executable},
+        container,
+    },
     clap::{App, Arg},
-    log::error,
     std::{fs, io::prelude::*, path},
 };
 pub fn subcommand<'a>() -> App<'a> {
@@ -11,10 +13,8 @@ pub fn subcommand<'a>() -> App<'a> {
         .arg(Arg::new("container"))
 }
 
-#[derive(Debug)]
 pub struct Command {
-    container_id: String,
-    container_rt_dir: String,
+    container: container::Container,
 }
 
 pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
@@ -23,8 +23,7 @@ pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
         .expect("no input container.")
         .to_string();
     Box::from(Command {
-        container_rt_dir: ctx.container_rt_dir(&container_id),
-        container_id: container_id,
+        container: container::Container::new(&container_id, Box::new(ctx)),
     })
 }
 
@@ -39,6 +38,6 @@ fn send_byte_to_fifo(crt_dir: &String) {
 
 impl Executable for Command {
     fn execute(&self) {
-        send_byte_to_fifo(&self.container_rt_dir);
+        send_byte_to_fifo(&self.container.crt_dir());
     }
 }

@@ -1,14 +1,15 @@
 use {
     crate::{
-        commands::{Executable, Context},
+        commands::{Context, Executable},
+        container,
         models::{init, oci},
         utils,
     },
     clap::{App, Arg},
-    log::{error, info},
+    log::error,
     nix::sys::socket,
     serde::Serialize,
-    serde_json::{ser, Result as JsonResult},
+    serde_json::ser,
     std::{fs::File, io::prelude::*, os::unix::io::FromRawFd, process},
 };
 
@@ -35,13 +36,10 @@ pub fn subcommand<'a>() -> App<'a> {
         )
 }
 
-#[derive(Debug)]
 pub struct Command {
-    pub container_id: String,
     pub pid_file: String,
     pub bundle: String,
-    pub runtime_dir: String,
-    pub container_rt_dir: String,
+    pub container: container::Container,
 }
 
 pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
@@ -71,23 +69,10 @@ pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
     }
 
     Box::from(Command {
-        container_id: container_id.clone(),
         bundle: bundle,
         pid_file: pid_file.to_string(),
-        container_rt_dir: ctx.container_rt_dir(&container_id),
-        runtime_dir: ctx.runtime_dir,
+        container: container::Container::new(&container_id, Box::new(ctx)),
     })
-}
-
-fn load_oci_config(bundle: &String) -> JsonResult<oci::Config> {
-    let config_path = String::from(bundle) + "config.json";
-    let mut config_file =
-        File::open(config_path).expect(format!("can't open config.json in {}", bundle).as_str());
-    let mut config: String = String::new();
-    config_file.read_to_string(&mut config)
-        .expect("read config.json fail");
-    let config: oci::Config = serde_json::from_str(&config)?;
-    Ok(config)
 }
 
 impl Command {
@@ -97,7 +82,6 @@ impl Command {
             .arg("init")
             .spawn()
             .expect("failed to spawn subprocess");
-        
         if wait {
             child.wait().expect("failed to wait child exit");
             // debug!("child exit with {}", code);
@@ -106,19 +90,17 @@ impl Command {
 
     fn make_init_param(&self, oci_config: oci::Config) -> init::Parameter {
         init::Parameter {
-            container_id: self.container_id.clone(),
+            container_id: self.container.id.clone(),
             root_path: oci_config.root.path,
             args: oci_config.process.args,
             bundle: self.bundle.clone(),
             pid_file: self.pid_file.clone(),
-            runtime_dir: self.runtime_dir.clone(),
-            container_rt_dir: self.container_rt_dir.clone(),
         }
     }
 }
 
 fn send_to_pipe(pipe_fd: i32, data: impl Serialize) -> Result<(), String> {
-    let mut init_pipe = unsafe { File::from_raw_fd(pipe_fd) };        
+    let mut init_pipe = unsafe { File::from_raw_fd(pipe_fd) };
     let init_param = match ser::to_string(&data) {
         Ok(param) => param,
         Err(e) => return Err(format!("failed serialize init param to json: {}", e)),
@@ -131,7 +113,7 @@ fn send_to_pipe(pipe_fd: i32, data: impl Serialize) -> Result<(), String> {
 
 impl Executable for Command {
     fn execute(&self) {
-        let oci_config = load_oci_config(&self.bundle).expect("parse config.json fail");
+        let oci_config = container::load_oci_config(&self.bundle).expect("parse config.json fail");
         // info!("oci config is {:?}", oci_config);
 
         let (init_p, init_c) = socket::socketpair(
@@ -139,7 +121,8 @@ impl Executable for Command {
             socket::SockType::Stream,
             None,
             socket::SockFlag::empty(),
-        ).expect("create sockpair fail");
+        )
+        .expect("create sockpair fail");
 
         let init_param = self.make_init_param(oci_config.clone());
         send_to_pipe(init_p, init_param).expect("failed to write init pipe");

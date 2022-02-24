@@ -1,9 +1,5 @@
-use clap::{App,};
-use illya::{
-   commands,
-   commands::*,
-   log as logger,
-};
+use clap::App;
+use illya::{commands, commands::*, log as logger};
 use log::{debug, LevelFilter};
 
 fn execute() {
@@ -17,10 +13,11 @@ fn execute() {
          delete::subcommand(),
          start::subcommand(),
          spec::subcommand(),
+         state::subcommand(),
       ])
       .get_matches();
-   
-   let subcommand = commands::match_command(matchs);
+   let ctx = Context::new();
+   let subcommand = commands::match_command(matchs, ctx);
    subcommand.execute();
 }
 
@@ -34,4 +31,3 @@ fn main() {
    debug!("{:?}", std::env::args());
    execute();
 }
-

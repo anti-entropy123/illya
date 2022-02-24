@@ -7,6 +7,4 @@ pub struct Parameter {
     pub args: Vec<String>,
     pub bundle: String,
     pub pid_file: String,
-    pub runtime_dir: String,
-    pub container_rt_dir: String,
 }
