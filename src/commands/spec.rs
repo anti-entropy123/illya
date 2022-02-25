@@ -3,7 +3,7 @@ use {
     clap::{App, Arg},
     log::{error, info},
     serde_json as json,
-    std::{env, fs, io::prelude::*, process},
+    std::{collections::HashMap, env, fs, io::prelude::*, process},
 };
 
 pub fn subcommand<'a>() -> App<'a> {
@@ -49,7 +49,7 @@ impl Executable for Command {
                 path: String::new(),
             },
             process: oci::Process { args: vec![] },
-            annotations: vec![],
+            annotations: HashMap::new(),
         };
         let config_val = json::ser::to_string_pretty(&config).expect("failed to genarete json");
         let config_path = String::from(&self.bundle) + "config.json";

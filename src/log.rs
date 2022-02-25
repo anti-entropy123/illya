@@ -1,6 +1,6 @@
 use {
     crate::utils,
-    log::{Metadata, Record},
+    log::{LevelFilter::Error, Metadata, Record},
     std::{fs, io::prelude::*},
 };
 
@@ -37,7 +37,9 @@ impl log::Log for MyLogger {
             record.args()
         );
         file.write(msg.as_bytes()).unwrap();
-        print!("{} {}", record.level(), record.args());
+        if record.level() == Error {
+            print!("{} {}", record.level(), record.args());
+        }
     }
 
     fn flush(&self) {}

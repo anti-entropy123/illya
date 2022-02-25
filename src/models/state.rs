@@ -1,4 +1,7 @@
-use serde::{Deserialize, Serialize};
+use {
+    serde::{Deserialize, Serialize},
+    std::collections::HashMap,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
@@ -12,6 +15,15 @@ pub struct State {
     pub init_process_pid: u32,
     pub created: String,
     pub config: Config,
+}
+
+pub fn new_labels(annos: &HashMap<String, String>, bundle: &String) -> Vec<String> {
+    let mut labels = vec![];
+    for (k, v) in annos {
+        labels.push(k.clone() + "=" + v.as_str());
+    }
+    labels.push(format!("bundle={}", bundle));
+    labels
 }
 
 impl State {

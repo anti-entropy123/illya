@@ -1,4 +1,7 @@
-use serde::{Deserialize, Serialize};
+use {
+    serde::{Deserialize, Serialize},
+    std::collections::HashMap,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
@@ -14,5 +17,5 @@ pub struct Root {
 pub struct Config {
     pub root: Root,
     pub process: Process,
-    pub annotations: Vec<String>,
+    pub annotations: HashMap<String, String>,
 }

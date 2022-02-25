@@ -26,3 +26,4 @@ wasmtime = "0.34"
 wasmtime-wasi = "0.34"
 # fifo pipe
 unix-named-pipe = "0.2"
+tabwriter = "1.2"

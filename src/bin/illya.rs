@@ -1,6 +1,9 @@
-use clap::App;
-use illya::{commands, commands::*, log as logger};
-use log::{debug, LevelFilter};
+use {
+   clap::App,
+   illya::{commands, commands::*, log as logger},
+   log::{info, LevelFilter},
+   std::env,
+};
 
 fn execute() {
    let matchs = App::new("illya")
@@ -14,6 +17,7 @@ fn execute() {
          start::subcommand(),
          spec::subcommand(),
          state::subcommand(),
+         list::subcommand(),
       ])
       .get_matches();
    let ctx = Context::new();
@@ -28,6 +32,6 @@ fn set_log() {
 
 fn main() {
    set_log();
-   debug!("{:?}", std::env::args());
+   info!("{:?}", env::args());
    execute();
 }

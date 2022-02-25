@@ -31,7 +31,7 @@ pub fn new(sub_matchs: &clap::ArgMatches, ctx: Context) -> Box<dyn Executable> {
         .to_string();
     Box::from(Command {
         container: container::Container::new(&container_id, Box::new(ctx)),
-    })
+    }) 
 }
 
 impl Executable for Command {

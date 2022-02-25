@@ -144,7 +144,7 @@ impl Executable for Command {
         let created_time = utils::now_utc();
         env::set_current_dir(&self.param.root_path).expect("failed to change cwd");
         // utils::display_cwd_items();
-        self.create_oci_log().expect("failed to create oci-log");
+        // self.create_oci_log().expect("failed to create oci-log");
         self.update_pid_file().expect("failed to update pid file");
         let entry = path::Path::new(self.param.args.get(0).unwrap());
         let (s, f) = load_wasm_module(&entry);
@@ -152,8 +152,7 @@ impl Executable for Command {
 
         let oci_config =
             container::load_oci_config(&self.param.bundle).expect("failed to load oci config");
-        let mut labels = oci_config.annotations;
-        labels.push(format!("bundle={}", self.param.bundle));
+        let labels = state::new_labels(&oci_config.annotations, &self.param.bundle);
 
         self.container.update_state_file(&state::State {
             id: self.container.id.clone(),

@@ -1,0 +1,9 @@
+FROM scratch
+
+LABEL maintainer="闹钟大魔王"
+LABEL version="0.1"
+LABEL description="base test for illya"
+
+ADD main.wasm /
+
+ENTRYPOINT ["main.wasm"]

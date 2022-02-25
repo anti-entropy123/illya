@@ -33,12 +33,20 @@ pub fn is_exist(path: &String) -> bool {
     std::path::Path::new(path).exists()
 }
 
-pub fn display_cwd_items() {
-    let cwd = std::env::current_dir().unwrap();
-    let dir = std::fs::read_dir(&cwd).expect("can't access cwd");
+pub fn dir_item_names(dir: &String) -> Result<Vec<String>, ()> {
+    let dir = match std::fs::read_dir(&dir) {
+        Err(_) => return Err(()),
+        Ok(v) => v,
+    };
     let items: Vec<_> = dir
         .map(|x| String::from(x.unwrap().file_name().to_str().unwrap()))
         .collect();
+    Ok(items)
+}
+
+pub fn display_cwd_items() {
+    let cwd = std::env::current_dir().unwrap();
+    let items = dir_item_names(&cwd.to_str().unwrap().to_string()).expect("can't access cwd");
     info!(
         "current is {}, has items: {}",
         cwd.to_str().unwrap(),
@@ -47,5 +55,5 @@ pub fn display_cwd_items() {
 }
 
 pub fn now_utc() -> String {
-    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
